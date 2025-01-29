@@ -1,40 +1,28 @@
 local FW = {}
-
 function GetClosestGarage()
     local playerCoords = GetEntityCoords(PlayerPedId())
     local closestGarage = nil
     local closestDistance = Config.HideVehicleDistance
-
     for garageName, garageData in pairs(Config.Garages) do
         local garageCoords
-        
         if garageData.target and garageData.target.custompedposition then
             garageCoords = vector3(garageData.target.pedposition.x, garageData.target.pedposition.y, garageData.target.pedposition.z)
         else
             garageCoords = garageData.blips.blippoint
         end
-
         local distance = #(playerCoords - garageCoords)
-
         if distance < closestDistance then
             closestGarage = garageName
             closestDistance = distance
         end
     end
-
     if closestGarage and closestDistance <= Config.HideVehicleDistance then
         return closestGarage
     end
-
     return nil
 end
 
-
-
 exports('GetClosestGarage', GetClosestGarage)
-
-
-
 
 RegisterNetEvent('rafson_garage:openGarage')
 AddEventHandler('rafson_garage:openGarage', function()
@@ -61,6 +49,10 @@ CreateThread(function()
         end
         FW.SpawnVehicle = function(model, coords, heading, cb)
             FW.Object.Game.SpawnVehicle(model, coords, heading, cb)
+        end
+        FW.GetVehicleProperties = function(vehicle)
+            if not vehicle or not DoesEntityExist(vehicle) then return {} end
+            return FW.Object.Game.GetVehicleProperties(vehicle)
         end
         FW.GetPlate = function(vehicle)
             local props = FW.Object.Game.GetVehicleProperties(vehicle)
@@ -102,6 +94,10 @@ CreateThread(function()
             SetVehicleNumberPlateText(veh, plate)
             if cb then cb(veh) end
         end
+        FW.GetVehicleProperties = function(vehicle)
+            if not vehicle or not DoesEntityExist(vehicle) then return {} end
+            return FW.Object.Functions.GetVehicleProperties(vehicle)
+        end
         FW.GetPlate = function(vehicle)
             return GetVehicleNumberPlateText(vehicle) or ""
         end
@@ -110,8 +106,6 @@ CreateThread(function()
         end
     end
 end)
-
-
 
 function _U(key)
     local l = Config.Locale or 'en'
@@ -122,7 +116,6 @@ CreateThread(function()
     while not FW.Object do
         Wait(50)
     end
-
     for k, g in pairs(Config.Garages) do
         if g.blips.showBlip then
             local b = AddBlipForCoord(g.blips.blippoint)
@@ -135,16 +128,12 @@ CreateThread(function()
             AddTextComponentString(g.blips.label)
             EndTextCommandSetBlipName(b)
         end
-
         if Config.UsePedInteraction then
             RequestModel(g.target.PedModel)
             while not HasModelLoaded(g.target.PedModel) do
                 Wait(50)
             end
-
-            local pedPos = g.target.custompedposition and g.target.pedposition
-                or vector4(g.blips.blippoint.x, g.blips.blippoint.y, g.blips.blippoint.z, 90.0)
-
+            local pedPos = g.target.custompedposition and g.target.pedposition or vector4(g.blips.blippoint.x, g.blips.blippoint.y, g.blips.blippoint.z, 90.0)
             local ped = CreatePed(4, g.target.PedModel, pedPos.x, pedPos.y, pedPos.z - 1.0, pedPos.w, false, true)
             SetEntityInvincible(ped, true)
             FreezeEntityPosition(ped, true)
@@ -154,38 +143,30 @@ CreateThread(function()
             SetPedCombatMovement(ped, 0)
             SetPedCombatRange(ped, 0)
             if Config.Target == 'ox' then
-                exports.ox_target:addLocalEntity(ped, {
-                    {
-                        name = 'open_garage_'..k,
-                        label = g.target.label or 'Otwórz garaż',
-                        icon = g.target.icon or 'fas fa-warehouse',
-                        distance = g.target.distance or 2.5,
-                        onSelect = function()
-                            openGarage(k)
-                        end
-                    }
-                })
+                exports.ox_target:addLocalEntity(ped, {{
+                    name = 'open_garage_'..k,
+                    label = g.target.label or 'Otwórz garaż',
+                    icon = g.target.icon or 'fas fa-warehouse',
+                    distance = g.target.distance or 2.5,
+                    onSelect = function()
+                        openGarage(k)
+                    end
+                }})
             elseif Config.Target == 'qb' then
                 exports['qb-target']:AddTargetEntity(ped, {
-                    options = {
-                        {
-                            type = "client",
-                            icon = g.target.icon or 'fas fa-warehouse',
-                            label = g.target.label or 'Otwórz garaż',
-                            action = function()
-                                openGarage(k)
-                            end
-                        },
-                    },
+                    options = {{
+                        type = "client",
+                        icon = g.target.icon or 'fas fa-warehouse',
+                        label = g.target.label or 'Otwórz garaż',
+                        action = function()
+                            openGarage(k)
+                        end
+                    }},
                     distance = g.target.distance or 2.5
                 })
             end
         end
     end
-end)
-
-RegisterNetEvent('rafson_garage:client:openGarage', function(data)
-    local garage = Getclosestgara
 end)
 
 
@@ -226,25 +207,21 @@ function GetVehicleModelName(model)
     for word in fullName:gmatch("%S+") do
         table.insert(nameParts, word)
     end
-
     if #nameParts > 1 then
-        return nameParts[#nameParts - 1] .. " " .. nameParts[#nameParts]
+        return nameParts[#nameParts - 1].." "..nameParts[#nameParts]
     else
         return nameParts[1] or _U('unknown')
     end
 end
 
-
 function openGarage(name)
     if not name then return end
-
     if name == "depot" then
         FW.TriggerServerCallback('rafson_garage:getImpoundedVehicles', function(vehicles)
             local out = {}
             for _, veh in ipairs(vehicles) do
                 local props = veh.vehicleProps
                 local reallyImpounded = true
-
                 if Config.ImpoundCheckMode and veh.stored == 0 then
                     if IsVehicleWithPlateOnMap(veh.plate) then
                         reallyImpounded = false
@@ -252,41 +229,36 @@ function openGarage(name)
                 elseif veh.stored ~= 0 then
                     reallyImpounded = false
                 end
-
-
                 if reallyImpounded then
                     table.insert(out, {
-                        plate        = veh.plate,
-                        vin          = veh.vin or _U('none'),
-                        name         = GetVehicleModelName(veh.model),
-                        model        = FW.GetVehicleModelName(veh.model),
-                        bodyHealth   = veh.bodyHealth,
+                        plate = veh.plate,
+                        vin = veh.vin or _U('none'),
+                        name = GetVehicleModelName(veh.model),
+                        model = FW.GetVehicleModelName(veh.model),
+                        bodyHealth = veh.bodyHealth,
                         engineHealth = veh.engineHealth,
-                        fuelLevel    = veh.fuelLevel,
-                        stored       = false,
-                        impounded    = true,
-                        status       = "impounded",
-                        favorite     = veh.favorite or 0
+                        fuelLevel = veh.fuelLevel,
+                        stored = false,
+                        impounded = true,
+                        status = "impounded",
+                        favorite = veh.favorite or 0
                     })
                 end
             end
-
             if #out == 0 then
-                Config.Notify(_U('no_vehicle')) 
+                Config.Notify(_U('no_vehicle'))
                 return
             end
-
             SetNuiFocus(true, true)
             SendNUIMessage({
-                action   = 'openGarage',
-                type     = 'impound',
-                garage   = name,
-                locales  = Locales[Config.Locale],
-                showVin  = Config.ShowVIN,
+                action = 'openGarage',
+                type = 'impound',
+                garage = name,
+                locales = Locales[Config.Locale],
+                showVin = Config.ShowVIN,
                 vehicles = out
             })
         end)
-
     else
         FW.TriggerServerCallback('rafson_garage:getPlayerVehicles', function(vehicles)
             local out = {}
@@ -297,53 +269,100 @@ function openGarage(name)
                 elseif veh.stored == 2 then
                     st = 'impounded'
                 end
-
                 if Config.ImpoundCheckMode and st == 'out' then
                     if not IsVehicleWithPlateOnMap(veh.plate) then
                         st = 'impounded'
                     end
                 end
                 table.insert(out, {
-                    plate        = veh.plate,
-                    vin          = veh.vin or _U('none'),
-                    name         = GetVehicleModelName(veh.model),
-                    model        = FW.GetVehicleModelName(veh.model),
-                    bodyHealth   = veh.bodyHealth,
+                    plate = veh.plate,
+                    vin = veh.vin or _U('none'),
+                    name = GetVehicleModelName(veh.model),
+                    model = FW.GetVehicleModelName(veh.model),
+                    bodyHealth = veh.bodyHealth,
                     engineHealth = veh.engineHealth,
-                    fuelLevel    = veh.fuelLevel,
-                    stored       = (st == "stored"),
-                    impounded    = (st == "impounded"),
-                    status       = st,
-                    favorite     = veh.favorite or 0
+                    fuelLevel = veh.fuelLevel,
+                    stored = (st == "stored"),
+                    impounded = (st == "impounded"),
+                    status = st,
+                    favorite = veh.favorite or 0
                 })
             end
-
             if #out == 0 then
-                Config.Notify(_U('no_vehicle')) 
+                Config.Notify(_U('no_vehicle'))
                 return
             end
-
             SetNuiFocus(true, true)
             SendNUIMessage({
-                action   = 'openGarage',
-                type     = 'garage',
-                garage   = name,
-                locales  = Locales[Config.Locale],
-                showVin  = Config.ShowVIN,
+                action = 'openGarage',
+                type = 'garage',
+                garage = name,
+                locales = Locales[Config.Locale],
+                showVin = Config.ShowVIN,
                 vehicles = out
             })
         end)
     end
 end
 
-
-
-
-
 RegisterNUICallback('closeGarage', function(_, cb)
     SetNuiFocus(false, false)
     SendNUIMessage({ action = 'closeGarage' })
 end)
+
+function GetVehicleDamageData(vehicle)
+    local damage = {}
+    if not DoesEntityExist(vehicle) then return damage end
+    damage.engineHealth = GetVehicleEngineHealth(vehicle)
+    damage.bodyHealth = GetVehicleBodyHealth(vehicle)
+    damage.tankHealth = GetVehiclePetrolTankHealth(vehicle)
+    damage.tyres = {}
+    for i = 0, 7 do
+        damage.tyres[i] = IsVehicleTyreBurst(vehicle, i, false)
+    end
+    damage.windows = {}
+    for i = 0, 7 do
+        damage.windows[i] = not IsVehicleWindowIntact(vehicle, i)
+    end
+    damage.doors = {}
+    for i = 0, 5 do
+        damage.doors[i] = IsVehicleDoorDamaged(vehicle, i)
+    end
+    return damage
+end
+
+function ApplyVehicleDamageData(vehicle, damage)
+    if not damage or not DoesEntityExist(vehicle) then return end
+    if damage.engineHealth then SetVehicleEngineHealth(vehicle, damage.engineHealth) end
+    if damage.bodyHealth then SetVehicleBodyHealth(vehicle, damage.bodyHealth) end
+    if damage.tankHealth then SetVehiclePetrolTankHealth(vehicle, damage.tankHealth) end
+    if damage.tyres then
+        for i, burst in pairs(damage.tyres) do
+            local index = tonumber(i)
+            if burst and index and index >= 0 and index <= 7 then
+                SetVehicleTyreBurst(vehicle, index, true, 1000.0)
+            end
+        end
+    end
+    if damage.windows then
+        for i, broken in pairs(damage.windows) do
+            local index = tonumber(i)
+            if broken and index then
+                SmashVehicleWindow(vehicle, index)
+            end
+        end
+    end
+    if damage.doors then
+        local doorCount = GetNumberOfVehicleDoors(vehicle)
+        for i, doorDamaged in pairs(damage.doors) do
+            local index = tonumber(i)
+            if doorDamaged and index and index < doorCount then
+                SetVehicleDoorBroken(vehicle, index, true)
+            end
+        end
+    end
+end
+
 
 RegisterNUICallback('withdrawVehicle', function(data, cb)
     if not Config.AllowVehicleSpawnInVehicle and IsPedInAnyVehicle(PlayerPedId(), false) then
@@ -351,7 +370,6 @@ RegisterNUICallback('withdrawVehicle', function(data, cb)
         cb({ success = false })
         return
     end
-
     if Config.Framework == 'ESX' then
         FW.TriggerServerCallback('rafson_garage:spawnVehicle', function(resp)
             if resp and resp.success then
@@ -361,6 +379,8 @@ RegisterNUICallback('withdrawVehicle', function(data, cb)
                         if DoesEntityExist(vehicle) then
                             Config.SetVehicleFuel(vehicle, resp.fuel)
                             FW.SetVehicleProperties(vehicle, resp.vehicleProps)
+                            Wait(250)
+                            ApplyVehicleDamageData(vehicle, resp.vehicleProps.damageData)
                             TaskWarpPedIntoVehicle(PlayerPedId(), vehicle, -1)
                             GivePlayerVehicleKeys(resp.vehicleProps.plate)
                             Config.Notify(_U('vehicle_taken_out'))
@@ -388,7 +408,9 @@ RegisterNUICallback('withdrawVehicle', function(data, cb)
                         FW.SpawnVehicle(resp.vehicleData.model, resp.vehicleData.plate, vector3(spot.x, spot.y, spot.z), spot.w, function(vehicle)
                             if DoesEntityExist(vehicle) then
                                 FW.SetVehicleProperties(vehicle, resp.vehicleData.vehicleProps)
+                                Wait(250)
                                 Config.SetVehicleFuel(vehicle, resp.fuel)
+                                ApplyVehicleDamageData(vehicle, resp.vehicleData.vehicleProps.damageData)
                                 TaskWarpPedIntoVehicle(PlayerPedId(), vehicle, -1)
                                 GivePlayerVehicleKeys(resp.vehicleData.plate)
                                 Config.Notify(_U('vehicle_taken_out'))
@@ -414,8 +436,6 @@ RegisterNUICallback('withdrawVehicle', function(data, cb)
     end
 end)
 
-
-
 RegisterNUICallback('storeVehicle', function(data, cb)
     local g = Config.Garages[data.garage]
     if not g then
@@ -423,32 +443,27 @@ RegisterNUICallback('storeVehicle', function(data, cb)
         cb({ success = false })
         return
     end
-    local storeCoords = g.target and g.target.custompedposition
-        and vector3(g.target.pedposition.x, g.target.pedposition.y, g.target.pedposition.z)
-        or g.blips.blippoint
-
+    local storeCoords = g.target and g.target.custompedposition and vector3(g.target.pedposition.x, g.target.pedposition.y, g.target.pedposition.z) or g.blips.blippoint
     if not storeCoords then
         Config.Notify(_U('garage_no_coords'))
         cb({ success = false })
         return
     end
-
     local found = GetClosestVehicleWithPlate(data.plate, 30.0)
     if found == 0 then
         Config.Notify(_U('vehicle_not_found'))
         cb({ success = false })
         return
     end
-
     local dist = #(GetEntityCoords(found) - storeCoords)
     if dist > Config.HideVehicleDistance then
         Config.Notify(_U('vehicle_too_far'))
         cb({ success = false })
         return
     end
-
     local fuelLevel = Config.GetVehicleFuel(found)
-    
+    local vehicleProps = FW.GetVehicleProperties(found)
+    vehicleProps.damageData = GetVehicleDamageData(found)
     FW.TriggerServerCallback('rafson_garage:storeVehicle', function(resp)
         if resp.success then
             Config.Notify(_U('vehicle_stored'))
@@ -457,11 +472,9 @@ RegisterNUICallback('storeVehicle', function(data, cb)
         else
             Config.Notify(_U('failed_store'))
         end
-
         cb(resp)
-    end, data.plate, data.garage, fuelLevel)
+    end, data.plate, data.garage, fuelLevel, vehicleProps)
 end)
-
 
 RegisterNUICallback('retrieveImpoundedVehicle', function(data, cb)
     if not Config.AllowVehicleSpawnInVehicle and IsPedInAnyVehicle(PlayerPedId(), false) then
@@ -469,7 +482,6 @@ RegisterNUICallback('retrieveImpoundedVehicle', function(data, cb)
         cb({ success = false })
         return
     end
-
     if Config.Framework == 'ESX' then
         FW.TriggerServerCallback('rafson_garage:retrieveImpoundedVehicle', function(resp)
             if resp and resp.success then
@@ -479,6 +491,8 @@ RegisterNUICallback('retrieveImpoundedVehicle', function(data, cb)
                         if DoesEntityExist(vehicle) then
                             Config.SetVehicleFuel(vehicle, resp.fuel)
                             FW.SetVehicleProperties(vehicle, resp.vehicleProps)
+                            Wait(250)
+                            ApplyVehicleDamageData(vehicle, resp.vehicleProps.damageData)
                             TaskWarpPedIntoVehicle(PlayerPedId(), vehicle, -1)
                             GivePlayerVehicleKeys(resp.vehicleProps.plate)
                             Config.Notify(_U('vehicle_from_imp'))
@@ -511,6 +525,8 @@ RegisterNUICallback('retrieveImpoundedVehicle', function(data, cb)
                             if DoesEntityExist(vehicle) then
                                 Config.SetVehicleFuel(vehicle, resp.fuel)
                                 FW.SetVehicleProperties(vehicle, resp.vehicleData.vehicleProps)
+                                Wait(250)
+                                ApplyVehicleDamageData(vehicle, resp.vehicleData.vehicleProps.damageData)
                                 TaskWarpPedIntoVehicle(PlayerPedId(), vehicle, -1)
                                 GivePlayerVehicleKeys(resp.vehicleData.plate)
                                 Config.Notify(_U('vehicle_from_imp'))
@@ -536,10 +552,9 @@ RegisterNUICallback('retrieveImpoundedVehicle', function(data, cb)
                 end
                 cb({ success = false })
             end
-        end, data.plate, data.garage)        
+        end, data.plate, data.garage)
     end
 end)
-
 
 RegisterNUICallback('setFavorite', function(data, cb)
     FW.TriggerServerCallback('rafson_garage:setFavorite', function(ok)
