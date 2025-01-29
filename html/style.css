@@ -1,0 +1,402 @@
+
+body {
+    margin: 0;
+    padding: 0;
+    font-family: Arial, sans-serif;
+}
+
+
+#garageUI {
+    width: 420px;
+    height: fit-content;
+    max-height: 90vh;
+    position: fixed;
+    top: 5%;
+    left: 2%;
+    background: rgba(0, 0, 0, 0.8);
+    color: white;
+    border-radius: 10px;
+    display: none;
+    flex-direction: column;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.8);
+    padding: 5px;
+    overflow: hidden;
+    box-sizing: border-box;
+    user-select: none;
+}
+
+
+.garage-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 15px;
+    height: 50px;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.garage-header h2 {
+    font-size: 20px;
+}
+
+.header-left h2 {
+    margin: 0;
+    font-size: 14px;
+    font-weight: bold;
+    color: white;
+}
+
+.header-left h3 {
+    margin: 0;
+    font-size: 10px;
+    color: #ccc;
+}
+
+.header-right {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+
+.garage-list {
+    max-height: 65vh; 
+    overflow-y: auto; 
+    cursor: grab;
+}
+.garage-list:active {
+    cursor: grabbing;
+}
+
+
+.garage-list::-webkit-scrollbar {
+    display: none;
+}
+
+.vehicle-item {
+    background: #1a1a1a;
+    border-radius: 2px;
+    padding: 10px;
+    margin-bottom: 15px;
+    margin-left: 3.5%;
+    color: white;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    width: 95%;
+    gap: 10px;
+    height: auto;
+    position: relative;
+    box-sizing: border-box;
+    overflow: hidden;
+}
+
+
+.vehicle-header {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    width: 100%;
+    gap: 10px;
+}
+
+.vehicle-image {
+    background: #0d0d0d;
+    background-size: cover;
+    border-radius: 2px;
+    width: 12vw;
+    height: 4.8vw;
+    object-fit: cover;
+}
+
+.vehicle-info {
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.vehicle-info h4 {
+    margin: 0;
+    font-size: 16px;
+    font-weight: bold;
+    color: white;
+}
+
+.vehicle-info p {
+    margin: 0;
+    font-size: 12px;
+    color: #bbb;
+}
+
+.vehicle-info p span {
+    color: white;
+    font-weight: bold;
+}
+
+.status-button {
+    position: absolute;
+    top: 7px;
+    right: 5px;
+    background: rgba(0, 200, 83, 0.2);
+    color: rgba(0, 200, 83, 0.8);
+    font-size: 10px;
+    font-weight: bold;
+    border: 1px solid #00c853;
+    border-radius: 2px;
+    padding: 3px 7px;
+    text-transform: uppercase;
+}
+
+.vehicle-stats {
+    display: flex;
+    justify-content: flex-start;
+    gap: 3px;
+    margin-top: 1px;
+}
+
+.stat {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    background: rgba(255, 136, 0, 0.25);
+    color: white;
+    font-size: 10px;
+    padding: 3px 6px;
+    border: 1px solid #ff8800;
+    border-radius: 4px;
+    text-align: center;
+    font-weight: bold;
+}
+
+.stat i {
+    font-size: 11px;
+}
+
+.stat span {
+    font-size: 10px;
+    color: white;
+}
+
+
+.vehicle-star {
+    position: absolute;
+    bottom: 10px;
+    right: 10px;
+    font-size: 16px;
+    color: #ffd700;
+    cursor: pointer;
+    transition: bottom 0.3s ease;
+}
+
+
+.vehicle-item.expanded {
+    background-color: rgba(56, 30, 0, 0.692);
+    border: 1px solid #ff8800;
+    transition: all 0.3s ease;
+}
+.vehicle-item.expanded .vehicle-star {
+    bottom: 50px; 
+}
+
+
+.vehicle-item .action-button {
+    display: none;
+    position: absolute;
+    bottom: 8px;
+    left: 10px;
+    right: 10px;
+    padding: 10px;
+    background-color: #ff8800;
+    color: white;
+    font-weight: bold;
+    text-align: center;
+    cursor: pointer;
+    border: none;
+    border-radius: 2px;
+}
+
+
+.vehicle-item.expanded .action-button {
+    display: block;
+}
+
+
+.vehicle-item.locked {
+    pointer-events: none;
+    opacity: 0.6;
+}
+
+.garage-tabs {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 5px;
+    margin: 10px 15px;
+    width: 95%;
+    box-sizing: border-box;
+}
+
+.tab-button {
+    padding: 8px 6px;
+    background: rgba(0, 0, 0, 0.897);
+    color: white;
+    border-radius: 2px;
+    font-size: 10px;
+    font-weight: bold;
+    cursor: pointer;
+    text-transform: uppercase;
+    box-sizing: border-box;
+    border: none;
+    text-align: center;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.tab-button.active {
+    background: rgba(71, 38, 0, 0.534);
+    border: 2px solid #ff8800;
+}
+
+.tab-button:hover {
+    background: #ff8800;
+    color: black;
+    outline: none;
+}
+
+.vehicle-item .action-button {
+    display: none;
+    position: absolute;
+    bottom: 8px;
+
+    left: 10px;
+    right: 10px;
+
+    padding: 10px;
+    background-color: #ff8800;
+    color: white;
+    font-weight: bold;
+    text-align: center;
+    cursor: pointer;
+    border: none;
+    border-radius: 2px;
+    
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.vehicle-item.expanded .action-button {
+    display: block;
+}
+
+.vehicle-item .action-button {
+    display: none;
+    position: absolute;
+    bottom: 8px;
+    left: 10px;
+    right: 10px;
+    padding: 10px;
+    background-color: #ff8800;
+    color: white;
+    font-weight: bold;
+    text-align: center;
+    cursor: pointer;
+    border: none;
+    border-radius: 2px;
+}
+
+.garage-header button:hover {
+    background: #ff8800;
+    color: black;
+}
+
+#search {
+    margin: 10px 15px;
+    padding: 8px;
+    font-size: 12px;
+    color: white;
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 2px;
+    width: 95%;
+    box-sizing: border-box;
+}
+
+#search::placeholder {
+    color: #aaa;
+}
+
+.active-tab {
+    font-size: 12px;
+    font-weight: bold;
+    color: white;
+}
+
+.garage-counter {
+    font-size: 10px;
+    color: #ffcc00;
+}
+
+
+.status-button.stored {
+    background: rgba(0, 200, 83, 0.2);
+    color: rgba(0, 200, 83, 0.8);
+    border: 1px solid #00c853;
+  }
+  .status-button.out {
+    background: rgba(255, 200, 0, 0.2);
+    color: rgba(255, 200, 0, 0.8);
+    border: 1px solid #ffc800;
+  }
+  .status-button.impounded {
+    background: rgba(200, 0, 0, 0.2);
+    color: rgba(200, 0, 0, 0.8);
+    border: 1px solid #c80000;
+  }
+
+  .vehicle-item {
+    position: relative;
+    padding-bottom: 10px;
+    transition: all 0.3s ease;
+  }
+  .vehicle-item.expanded {
+    padding-bottom: 50px;
+  }
+  .vehicle-item .action-button {
+    display: none;
+    width: 95%;
+    padding: 10px;
+    background-color: #ff8800;
+    color: white;
+    font-weight: bold;
+    text-align: center;
+    cursor: pointer;
+    border: none;
+    border-radius: 2px;
+    position: absolute;
+    bottom: 8px;
+    left: 10px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .vehicle-item.expanded .action-button {
+    display: block;
+  }
+  .vehicle-star {
+    position: absolute;
+    bottom: 10px;
+    right: 10px;
+    font-size: 16px;
+    color: #ffd700;
+    cursor: pointer;
+  }
+  .vehicle-item.locked {
+    pointer-events: none;
+    opacity: 0.6;
+  }

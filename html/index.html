@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>rafson_garage</title>
+  <link rel="stylesheet" href="style.css" />
+  <link
+    href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css"
+    rel="stylesheet"
+  />
+</head>
+<body>
+  <div id="garageUI">
+    <div class="garage-header">
+      <h2 id="headerTitle">Your Vehicles</h2>
+    </div>
+
+    <div class="garage-tabs">
+      <button class="tab-button active" data-filter="all" id="tabAllBtn">All</button>
+      <button class="tab-button" data-filter="stored" id="tabStoredBtn">Stored</button>
+      <button class="tab-button" data-filter="out" id="tabOutBtn">Out</button>
+      <button class="tab-button" data-filter="impounded" id="tabImpoundedBtn">Impounded</button>
+    </div>
+
+    <input type="text" id="search" placeholder="Search for the vehicle..." />
+
+    <div class="garage-list"></div>
+  </div>
+
+  <script src="https://code.jquery.com/jquery-3.6.4.min.js"></script>
+  <script>
+    $(document).ready(function () {
+      $('#garageUI').hide();
+      const statusLabels = { stored: '', out: '', impounded: '' };
+
+      function getSortPriority($item) {
+        let isFavorite = $item.attr('data-favorite') === 'true';
+        if (isFavorite) return 0;
+        let status = $item.data('status');
+        if (status === 'stored') return 1;
+        if (status === 'out') return 2;
+        if (status === 'impounded') return 3;
+        return 999;
+      }
+
+      function sortVehicleItems() {
+        let container = $('.garage-list');
+        let items = container.children('.vehicle-item');
+        items.sort(function(a, b) {
+          let prioA = getSortPriority($(a));
+          let prioB = getSortPriority($(b));
+          return prioA - prioB;
+        });
+        container.append(items);
+      }
+
+      window.addEventListener('message', function (event) {
+        if (event.data.action === 'openGarage') {
+          const showVIN = event.data.showVin;
+          $('#search').prev('h3').remove();
+          $('#garageUI').show();
+          $('.garage-list').empty();
+          let loc = event.data.locales || {};
+          $('#headerTitle').text(loc.uiHeaderTitle || 'Your vehicles');
+          $('#tabAllBtn').text(loc.uiTabAll || 'All');
+          $('#tabStoredBtn').text(loc.uiTabStored || 'Stored');
+          $('#tabOutBtn').text(loc.uiTabOut || 'Out');
+          $('#tabImpoundedBtn').text(loc.uiTabImpounded || 'Impounded');
+          $('#search').attr('placeholder', loc.uiSearchPlaceholder || 'Search for a vehicle...');
+          statusLabels.stored = loc.uiTabStored || 'Stored';
+          statusLabels.out = loc.uiTabOut || 'Out';
+          statusLabels.impounded = loc.uiTabImpounded || 'Impounded';
+          if (event.data.type === 'impound') {
+            $('.garage-tabs').hide();
+            $('#headerTitle').text(loc.impouned_vehicles);
+          } else {
+            $('.garage-tabs').show();
+            $('#headerTitle').text(loc.uiHeaderTitle || 'Your Vehicles');
+          }
+          event.data.vehicles.forEach((vehicle) => {
+            let statusText = vehicle.status;
+            let labelText = statusLabels[statusText] || (loc.uiUnknownStatus || 'Nieznany');
+            let withdrawBtnTxt = loc.uiWithdrawBtn || 'Wyciągnij';
+            let storeBtnTxt = loc.uiStoreBtn || 'Schowaj';
+            let impoundBtnTxt = loc.uiImpoundBtn || 'Odholuj';
+            let withdrawButton = (statusText === 'stored' && event.data.type !== 'impound')
+              ? `<button class="action-button withdraw-button"><i class='fas fa-warehouse'></i> ${withdrawBtnTxt}</button>`
+              : '';
+            let storeButton = (statusText === 'out' && event.data.type !== 'impound')
+              ? `<button class="action-button store-button"><i class='fas fa-warehouse'></i> ${storeBtnTxt}</button>`
+              : '';
+            let buttonHTML = withdrawButton + storeButton;
+            if (event.data.type === 'impound') {
+              buttonHTML = `<button class="action-button impound-button">${impoundBtnTxt}</button>`;
+            }
+            let lockedClass = (event.data.type !== 'impound' && statusText === 'impounded') ? ' locked' : '';
+            let vehicleImageUrl = `https://docs.fivem.net/vehicles/${vehicle.model.toLowerCase()}.webp`;
+            let isFavorite = (vehicle.favorite && vehicle.favorite == 1);
+            let starColor = isFavorite ? '#ffd700' : 'gray';
+            let starData = isFavorite ? 'true' : 'false';
+            $('.garage-list').append(`
+              <div class="vehicle-item${lockedClass}"
+                   data-status="${statusText}"
+                   data-plate="${vehicle.plate}"
+                   data-garage="${event.data.garage}"
+                   data-favorite="${starData}">
+                <div class="vehicle-header">
+                  <div class="vehicle-image"
+                       style="background:url('${vehicleImageUrl}') no-repeat center center;background-size:contain;width:12vw;height:4.8vw;border-radius:2px;">
+                  </div>
+                  <div class="vehicle-info">
+                    <h4>${vehicle.name}</h4>
+                    <p>${loc.plate}: <span>${vehicle.plate}</span></p>
+                    <p id="vehicle-vin-container" style="display: ${showVIN ? 'block' : 'none'};">
+                      VIN: <span>${vehicle.vin || 'N/A'}</span>
+                    </p>
+                    <div class="vehicle-stats">
+                      <div class="stat"><i class="fas fa-car"></i><span>${vehicle.bodyHealth}%</span></div>
+                      <div class="stat"><i class="fas fa-cogs"></i><span>${vehicle.engineHealth}%</span></div>
+                      <div class="stat"><i class="fas fa-gas-pump"></i><span>${vehicle.fuelLevel}%</span></div>
+                    </div>
+                  </div>
+                  <button class="status-button ${statusText}">${labelText}</button>
+                </div>
+                <i class="fas fa-star vehicle-star" style="color:${starColor};"></i>
+                ${buttonHTML}
+              </div>
+            `);
+          });
+          $('.tab-button').removeClass('active');
+          $('#tabAllBtn').addClass('active');
+          $('.vehicle-item').show();
+          sortVehicleItems();
+        } else if (event.data.action === 'closeGarage') {
+          $('#garageUI').hide();
+        }
+      });
+
+      $(document).on('click', '.withdraw-button', function () {
+        let $vehicleItem = $(this).closest('.vehicle-item');
+        let plate = $vehicleItem.data('plate');
+        let garage= $vehicleItem.data('garage');
+        $.post('https://rafson_garage/withdrawVehicle', JSON.stringify({ plate: plate, garage: garage }), function (resp) {
+          if (resp.success) {
+            $vehicleItem.remove();
+            closeGarageUI();
+          }
+        });
+      });
+
+      $(document).on('click', '.store-button', function () {
+        let $vehicleItem = $(this).closest('.vehicle-item');
+        let plate = $vehicleItem.data('plate');
+        let garage= $vehicleItem.data('garage');
+        $.post('https://rafson_garage/storeVehicle', JSON.stringify({ plate: plate, garage: garage }), function (resp) {
+          if (resp.success) {
+            $vehicleItem.remove();
+            closeGarageUI();
+          }
+        });
+      });
+
+      $(document).on('click', '.impound-button', function () {
+        let $vehicleItem = $(this).closest('.vehicle-item');
+        let plate = $vehicleItem.data('plate');
+        let garage= $vehicleItem.data('garage');
+        $.post('https://rafson_garage/retrieveImpoundedVehicle', JSON.stringify({ plate: plate, garage: garage }), function (resp) {
+          if (resp.success) {
+            $vehicleItem.remove();
+            closeGarageUI();
+          }
+        });
+      });
+
+      $(document).on('keydown', function (event) {
+        if (event.key === 'Escape') {
+          closeGarageUI();
+        }
+      });
+
+      $(document).on('click', '.vehicle-star', function (event) {
+        event.stopPropagation();
+        let $star = $(this);
+        let $vehicleItem = $star.closest('.vehicle-item');
+        let currentFavState = ($vehicleItem.attr('data-favorite') === 'true');
+        let newFavState = !currentFavState;
+        let plate = $vehicleItem.data('plate');
+        $.post('https://rafson_garage/setFavorite', JSON.stringify({
+          plate: plate,
+          favorite: newFavState ? 1 : 0
+        }), function(r) {
+          if (r.success) {
+            $vehicleItem.attr('data-favorite', newFavState ? 'true' : 'false');
+            $star.css('color', newFavState ? '#ffd700' : 'gray');
+            sortVehicleItems();
+          }
+        });
+      });
+
+      $(document).on('click', '.vehicle-item', function (event) {
+        if (!$(event.target).hasClass('vehicle-star') &&
+            !$(event.target).hasClass('impound-button') &&
+            !$(event.target).hasClass('action-button')) {
+          $('.vehicle-item').not(this).removeClass('expanded');
+          $(this).toggleClass('expanded');
+        }
+      });
+
+      $('.tab-button').click(function () {
+        $('.tab-button').removeClass('active');
+        $(this).addClass('active');
+        let filter = $(this).data('filter');
+        $('.vehicle-item').removeClass('expanded').each(function () {
+          if (filter === 'all' || $(this).data('status') === filter) {
+            $(this).show();
+          } else {
+            $(this).hide();
+          }
+        });
+      });
+
+      function closeGarageUI() {
+        $('#garageUI').hide();
+        $.post('https://rafson_garage/closeGarage');
+      }
+
+      $(document).on('input', '#search', function () {
+        let searchText = $(this).val().toLowerCase();
+        $('.vehicle-item').each(function () {
+          let $item = $(this);
+          let name = $item.find('h4').text().toLowerCase();
+          let plate = $item.data('plate').toString().toLowerCase();
+          if (name.includes(searchText) || plate.includes(searchText)) {
+            $item.show();
+          } else {
+            $item.hide();
+          }
+        });
+      });
+    });
+  </script>
+</body>
+</html>
