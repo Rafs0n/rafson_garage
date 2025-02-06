@@ -138,26 +138,31 @@ if Config.Framework == 'ESX' then
             cb({ success = false })
             return
         end
-        MySQL.Async.fetchAll('SELECT owner, vehicle FROM owned_vehicles WHERE plate = @plate', {
+        
+        MySQL.Async.fetchAll('SELECT owner FROM owned_vehicles WHERE plate = @plate', {
             ['@plate'] = plate
         }, function(result)
             if not result or #result == 0 then
                 cb({ success = false })
                 return
             end
+            
             local row = result[1]
             if row.owner ~= xPlayer.identifier then
                 cb({ success = false })
                 return
             end
-            local oldProps = json.decode(row.vehicle) or {}
+            
+            local newProps = {}
             if fuelLevel then
-                oldProps.fuelLevel = fuelLevel
+                newProps.fuelLevel = fuelLevel
             end
-            if vehicleProps and vehicleProps.damageData then
-                oldProps.damageData = vehicleProps.damageData
+            if vehicleProps then
+                newProps = vehicleProps
             end
-            local newJson = json.encode(oldProps)
+            
+            local newJson = json.encode(newProps)
+            
             MySQL.Async.execute('UPDATE owned_vehicles SET stored = 1, vehicle = @veh WHERE plate = @plate', {
                 ['@veh'] = newJson,
                 ['@plate'] = plate
@@ -170,6 +175,7 @@ if Config.Framework == 'ESX' then
             end)
         end)
     end)
+    
 
     ESX.RegisterServerCallback('rafson_garage:retrieveImpoundedVehicle', function(source, cb, plate, garage)
         local x = FW.GetPlayerFromId(source)
@@ -319,21 +325,34 @@ elseif Config.Framework == 'QB' then
                         if vehicleProps and vehicleProps.damageData then
                             oldData.damageData = vehicleProps.damageData
                         end
+    
                         if fuelLevel then
                             oldData.fuelLevel = fuelLevel
                         end
+    
                         local newMods = json.encode(oldData)
+
                         MySQL.Async.execute('UPDATE player_vehicles SET state = 1, fuel = @fuel, mods = @mods WHERE plate = @plate', {
                             ['@plate'] = plate,
                             ['@fuel'] = fuelLevel,
                             ['@mods'] = newMods
-                        }, function(rows)
-                            if rows > 0 then
-                                cb({ success = true })
-                            else
-                                cb({ success = false })
-                            end
-                        end)
+                        })
+    
+                        if vehicleProps and vehicleProps.engineHealth then
+                            MySQL.Async.execute('UPDATE player_vehicles SET engine = @engineHealth WHERE plate = @plate', {
+                                ['@plate'] = plate,
+                                ['@engineHealth'] = vehicleProps.engineHealth
+                            })
+                        end
+    
+                        if vehicleProps and vehicleProps.bodyHealth then
+                            MySQL.Async.execute('UPDATE player_vehicles SET body = @bodyHealth WHERE plate = @plate', {
+                                ['@plate'] = plate,
+                                ['@bodyHealth'] = vehicleProps.bodyHealth
+                            })
+                        end
+    
+                        cb({ success = true })
                     else
                         cb({ success = false })
                     end
@@ -343,6 +362,8 @@ elseif Config.Framework == 'QB' then
             end
         end)
     end)
+    
+    
 
     QBCore.Functions.CreateCallback('rafson_garage:spawnVehicle', function(source, cb, plate, garage)
         local Player = QBCore.Functions.GetPlayer(source)
@@ -426,3 +447,5 @@ elseif Config.Framework == 'QB' then
         end
     end)
 end
+
+
